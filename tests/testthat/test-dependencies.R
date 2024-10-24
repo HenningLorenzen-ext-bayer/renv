@@ -175,6 +175,12 @@ test_that("packages referenced by modules::import() are discovered", {
   expect_setequal(deps$Package, c("A", "B", "C", "D", "G", "H", "modules"))
 })
 
+# https://github.com/rstudio/renv/issues/2007
+test_that("module without parameter doesn't give an error", {
+  deps <- dependencies("resources/modules-empty.R")
+  expect_setequal(deps$Package, character())
+})
+
 test_that("dependencies specified in R Markdown site generators are found", {
 
   renv_tests_scope()
@@ -427,9 +433,9 @@ test_that("dependencies ignore pseudo-code in YAML metadata", {
 })
 
 test_that("~/.Rprofile included in dev dependencies when config$user.profile()", {
-  path <- renv_scope_tempfile("renv-profile")
+  path <- renv_scope_tempfile("renv-profile", fileext = ".R")
   writeLines("library(utils)", path)
-  renv_scope_envvars(R_PROFILE_USER = path)
+  renv_scope_envvars(R_PROFILE_USER = normalizePath(path, winslash = "/"))
   renv_scope_options(renv.config.user.profile = TRUE)
 
   renv_tests_scope()
@@ -612,5 +618,10 @@ test_that("dependencies() detects usage of ragg_png device", {
   
   check("opts_chunk$set(dev = \"ragg_png\")")
   check("knitr::opts_chunk$set(dev = \"ragg_png\")")
-  
+
+})
+
+test_that("dependencies() does not create 'object' in parent environment", {
+  result <- dependencies("resources/code.R", quiet = TRUE)
+  expect_false(exists("object", envir = environment(), inherits = FALSE))
 })
